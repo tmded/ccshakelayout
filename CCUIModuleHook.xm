@@ -2,8 +2,11 @@
 #import "ManagerHook.h"
 #import <RemoteLog.h>
 
+
 %hook CCUIContentModuleContainerView
 
+//   THIS IS BAD
+//   many bugs, i shall exchange with a recurring version soon
 %new
 -(void)disableGestureRecognisers{
     for (UIGestureRecognizer* recogniser in self.subviews[0].subviews[0].subviews[0].gestureRecognizers){
