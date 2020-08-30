@@ -2,23 +2,57 @@
 #import "ManagerHook.h"
 #import <RemoteLog.h>
 
+BOOL blocking = NO;
+
+%hook CCUIModularControlCenterOverlayViewController
+- (_Bool)_dismissalTapGestureRecognizerShouldBegin:(id)arg1{
+    if (blocking){blocking = NO; return NO;}else return %orig;
+}
+%end
+
+
+
+
+%hook CCUIContentModuleContainerView
+- (_Bool)pointInside:(struct CGPoint)arg1 withEvent:(id)arg2{
+    if (moduleViewController.enabled){ 
+        blocking=YES; 
+        return NO;
+    }
+    //else 
+    return %orig;
+}
+%end
+
+void recurseGestureRecognisers(UIView* view,BOOL enabling ){
+
+    if ([view respondsToSelector:NSSelectorFromString(@"gestureRecognizers")]) 
+        for (UIGestureRecognizer* recogniser in view.gestureRecognizers){
+            recogniser.enabled=enabling;
+        }
+
+    for (UIView* subview in view.subviews)
+        recurseGestureRecognisers(subview, enabling);
+}
+
 
 %hook CCUIContentModuleContainerView
 
-//   THIS IS BAD
-//   many bugs, i shall exchange with a recurring version soon
+
 %new
 -(void)disableGestureRecognisers{
-    for (UIGestureRecognizer* recogniser in self.subviews[0].subviews[0].subviews[0].gestureRecognizers){
-        recogniser.enabled=NO;
-    }
+    recurseGestureRecognisers(self, NO);
+    //for (UIGestureRecognizer* recogniser in self.subviews[0].subviews[0].subviews[0].gestureRecognizers){
+    //    recogniser.enabled=NO;
+    //}
 }
 
 %new
 -(void)enableGestureRecognisers{
-    for (UIGestureRecognizer* recogniser in self.subviews[0].subviews[0].subviews[0].gestureRecognizers){
-        recogniser.enabled=YES;
-    }
+    recurseGestureRecognisers(self, YES);
+    //for (UIGestureRecognizer* recogniser in self.subviews[0].subviews[0].subviews[0].gestureRecognizers){
+    //    recogniser.enabled=YES;
+    //}
 }
 
 %new
@@ -68,8 +102,13 @@
 
 %new
 -(void)animatedAddCrossButton{
+    UIButton *CoverButton = [[UIButton alloc] init];
+    [self setBackgroundColor:[UIColor clearColor]];
+    [self addSubview:CoverButton];
+
+    
     UIButton *cancelButton = [%c(SBXCloseBoxView) buttonWithType:UIButtonTypeRoundedRect];
-    //[cancelButton addTarget:self action:@selector(clickedRemoveButton) forControlEvents:UIControlEventTouchUpInside];
+    [cancelButton addTarget:self action:@selector(clickedRemoveButton) forControlEvents:UIControlEventTouchUpInside];
 
     UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(clickedRemoveButton)];
     [cancelButton addGestureRecognizer:tap];
